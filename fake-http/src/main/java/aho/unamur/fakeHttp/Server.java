@@ -1,43 +1,95 @@
 package aho.unamur.fakeHttp;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
 import org.reflections.Reflections;
 
-import static org.reflections.ReflectionUtils.*;
-
+import com.auth0.jwt.algorithms.Algorithm;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
+import static org.reflections.ReflectionUtils.getAllMethods;
+import static org.reflections.ReflectionUtils.withAnnotation;
 
 public abstract class Server extends Agent {
-    private static final Map<String, Method> methodMap = new HashMap<>();
+    private final Map<String, Method> methodMap = new HashMap<>();
 
-    public static void addRoute(String verb, String path, Method method) {
+    public void addRoute(String verb, String path, Method method) {
         methodMap.put(verb + " - " + path, method);
+    }
+
+    protected final Algorithm algorithm;
+    private final JWTVerifier verifier;
+
+    public Server(String secret) {
+        if (secret.isEmpty()) {
+            this.algorithm = null;
+            this.verifier = null;
+        } else {
+            this.algorithm = Algorithm.HMAC256(secret);
+            this.verifier = JWT.require(this.algorithm).withIssuer("aho.unamur").build();
+        }
+
+        Set<Method> getMethods = getAllMethods(this.getClass(), withAnnotation(Get.class));
+
+        for (Method method : getMethods) {
+            Get annotation = method.getAnnotation(Get.class);
+            String path = annotation.value();
+
+            addRoute("GET", path, method);
+        }
+
+        Set<Method> postMethods = getAllMethods(this.getClass(), withAnnotation(Post.class));
+
+        for (Method method : postMethods) {
+            Post annotation = method.getAnnotation(Post.class);
+            String path = annotation.value();
+
+            addRoute("POST", path, method);
+        }
+    }
+
+    public Server() {
+        this("");
     }
 
     protected final Response receive(String verb, String path, String jwt, String body) {
         String key = verb + " - " + path;
 
         if (!methodMap.containsKey(key)) {
-            return new Response(404, "Not Found");
+            return new Response(404, "Path does not exist");
         }
 
-        // TODO test jwt if required !
+        Method method = methodMap.get(key);
+
+        if (method.isAnnotationPresent(Authenticated.class)) {
+            if (jwt == null) {
+                return new Response(401, "Authorization required and not provided");
+            }
+        }
 
         if (verb.equals("GET") && body != null) {
             return new Response(400, "Get resource does not accept body");
         }
 
-        Method method = methodMap.get(key);
-
         try {
             if (verb.equals("GET")) {
-                String responseBody = (String) method.invoke(this);
-                return new Response(200, responseBody);
+                return (Response) method.invoke(this);
             }
 
+            if (verb.equals("POST")) {
+                List<String> actualParameters = new ArrayList<>();
+
+                // TODO I should set order according to parameter names but that asks more development as
+                //  this information is not retained at compilation and it isn't worth it for this demo
+                for (String chunk : body.split("&")) {
+                    String value = chunk.split("=", 2)[1];
+                    actualParameters.add(value);
+                }
+
+                 return (Response) method.invoke(this, actualParameters.toArray());
+            }
             return (Response) method.invoke(this, body);
         } catch (IllegalAccessException | InvocationTargetException e) {
             System.err.println("Bad developer should have caught that before catch...");
@@ -61,26 +113,5 @@ public abstract class Server extends Agent {
 
     protected final Response receivePost(String path, String body) {
         return receive("POST", path, null, body);
-    }
-
-    static {
-        Reflections reflections = new Reflections("aho.unamur");
-
-        Set<Class<? extends Server>> classes = reflections.getSubTypesOf(Server.class);
-
-        for (Class<? extends Server> serverClass : classes) {
-            try {
-                Method addRoute = serverClass.getMethod("addRoute", String.class, String.class, Method.class);
-                Set<Method> annotatedMethods = getAllMethods(serverClass, withAnnotation(Get.class));
-                for (Method method : annotatedMethods) {
-                    Get annotation = method.getAnnotation(Get.class);
-                    String path = annotation.value();
-
-                    addRoute("GET", path, method);
-                }
-            } catch (NoSuchMethodException e) {
-                e.printStackTrace();
-            }
-        }
     }
 }
