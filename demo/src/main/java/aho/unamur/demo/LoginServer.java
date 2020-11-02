@@ -3,25 +3,35 @@ package aho.unamur.demo;
 import aho.unamur.fakeHttp.*;
 import com.auth0.jwt.JWT;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LoginServer extends Server {
     // never store clear-text password ! I can do it here because everything is fake !
     public Map<String, String> pwByUsername;
+    public Map<String, List<String>> licensesByUsername;
 
     public LoginServer(String secret) {
         super(secret);
         this.pwByUsername = new HashMap<>();
+        this.licensesByUsername = new HashMap<>();
+        this.pwByUsername.put("admin", "admin");
+        List<String> adminLicenses = new ArrayList<>();
+        adminLicenses.add("admin");
+        this.licensesByUsername.put("admin", adminLicenses);
     }
 
     @Post("/register")
     public Response register(String username, String password) {
         pwByUsername.put(username, password);
+        List<String> licenses = new ArrayList<>();
+        licensesByUsername.put(username, licenses);
 
-        String jwt = createJwt(username);
+        String jwt = createJwt(username, licenses);
 
-        return new Response(201, "User Created", "Authorization="+jwt);
+        return new Response(201, "User Created", "Authorization=" + jwt);
     }
 
     @Post("/login")
@@ -33,7 +43,7 @@ public class LoginServer extends Server {
             return new Response(401, "Unauthorized");
         }
 
-        String jwt = createJwt(username);
+        String jwt = createJwt(username, licensesByUsername.get(username));
 
         return new Response(201, "JWT Created", "Authorization=" + jwt);
     }
@@ -44,10 +54,26 @@ public class LoginServer extends Server {
         return new Response(200, "Hello my dear authenticated user !");
     }
 
-    private String createJwt(String username) {
+    public String addLicense(String username, String license) {
+        if (!pwByUsername.containsKey(username)) {
+            throw new IllegalArgumentException("User does not exist");
+        }
+        List<String> licenses = licensesByUsername.get(username);
+
+        if (licenses.contains(license)) {
+            throw new IllegalArgumentException("User already has that license");
+        } else {
+            licenses.add(license);
+        }
+
+        return createJwt(username, licenses);
+    }
+
+    private String createJwt(String username, List<String> licenses) {
         return JWT.create()
                 .withIssuer("aho.unamur")
                 .withClaim("username", username)
+                .withClaim("licenses", licenses)
                 .sign(this.algorithm);
     }
 }

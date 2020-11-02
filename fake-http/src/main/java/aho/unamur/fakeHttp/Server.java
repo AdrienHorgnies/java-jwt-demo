@@ -56,7 +56,7 @@ public abstract class Server extends Agent {
         this("");
     }
 
-    protected final Response receive(String verb, String path, String jwt, String body) {
+    protected final Response receive(String verb, String path, String token, String body) {
         String key = verb + " - " + path;
 
         if (!methodMap.containsKey(key)) {
@@ -64,17 +64,28 @@ public abstract class Server extends Agent {
         }
 
         Method method = methodMap.get(key);
+        Class<? extends Server> clazz = this.getClass();
 
-        if (method.isAnnotationPresent(Authenticated.class)) {
-            if (jwt == null) {
-                return new Response(401, "Authorization required and not provided");
+        DecodedJWT jwt;
+        if (method.isAnnotationPresent(Authenticated.class) ||
+                clazz.isAnnotationPresent(Authenticated.class) ||
+                method.isAnnotationPresent(License.class)) {
+            if (token == null) {
+                return new Response(401, "Authorization required");
             }
             try {
-                DecodedJWT verify = verifier.verify(jwt);
+                jwt = verifier.verify(token);
+                if (method.isAnnotationPresent(License.class)) {
+                    License annotation = method.getAnnotation(License.class);
+                    String requiredLicense = annotation.value();
+                    List<String> licenses = jwt.getClaim("licenses").asList(String.class);
+                    if (!licenses.contains(requiredLicense)) {
+                        return new Response(403, "Access Forbidden");
+                    }
+                }
             } catch (JWTDecodeException | SignatureVerificationException e) {
                 return new Response(401, "Authorization failed");
             }
-
         }
 
         if (verb.equals("GET") && body != null) {
