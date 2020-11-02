@@ -41,7 +41,7 @@ public class LoginServer extends Server {
     @Get("/hello")
     @Authenticated
     public Response hello() {
-        throw new UnsupportedOperationException("Not implemented");
+        return new Response(200, "Hello my dear authenticated user !");
     }
 
     private String createJwt(String username) {

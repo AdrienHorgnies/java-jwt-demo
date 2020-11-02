@@ -14,7 +14,6 @@ public class TestLoginServer {
     @Test
     public void testLogin_success() {
         Client client = new Client();
-
         LoginServer loginServer = new LoginServer(SECRET);
         loginServer.register("bob", "1234");
 
@@ -32,7 +31,6 @@ public class TestLoginServer {
     @Test
     public void testLogin_notFound() {
         Client client = new Client();
-
         LoginServer loginServer = new LoginServer(SECRET);
 
         Response response = client.post(loginServer, "/login", "username=bob&password=1234");
@@ -43,7 +41,6 @@ public class TestLoginServer {
     @Test
     public void testLogin_badPassword() {
         Client client = new Client();
-
         LoginServer loginServer = new LoginServer(SECRET);
         loginServer.register("bob", "1234");
 
@@ -55,7 +52,6 @@ public class TestLoginServer {
     @Test
     public void testRegister() {
         Client client = new Client();
-
         LoginServer loginServer = new LoginServer(SECRET);
 
         Response response = client.post(loginServer, "/register", "username=bob&password=1111");
@@ -72,7 +68,6 @@ public class TestLoginServer {
     @Test
     public void testHello_unauthenticated() {
         Client client = new Client();
-
         LoginServer loginServer = new LoginServer(SECRET);
 
         Response response = client.get(loginServer, "/hello");
@@ -83,7 +78,6 @@ public class TestLoginServer {
     @Test
     public void testHello_malformedJwt() {
         Client client = new Client();
-
         LoginServer loginServer = new LoginServer(SECRET);
         loginServer.register("bob", "1234");
 
@@ -95,9 +89,7 @@ public class TestLoginServer {
     @Test
     public void testHello_badSignature() {
         Client client = new Client();
-
         LoginServer loginServer = new LoginServer(SECRET);
-
         String token = JWT.create()
                 .withClaim("username", "bob")
                 .sign(Algorithm.HMAC256("not-the-server-secret"));
@@ -105,5 +97,16 @@ public class TestLoginServer {
         Response response = client.get(loginServer, "/hello", token);
 
         Assert.assertEquals(401, response.getCode());
+    }
+
+    @Test
+    public void testHello_authenticated() {
+        Client client = new Client();
+        LoginServer loginServer = new LoginServer(SECRET);
+        String token = loginServer.register("bob", "1234").getHeader("Authorization");
+
+        Response response = client.get(loginServer, "/hello", token);
+
+        Assert.assertEquals(200, response.getCode());
     }
 }
