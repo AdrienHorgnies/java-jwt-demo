@@ -3,6 +3,7 @@ package aho.unamur.demo;
 import aho.unamur.fakeHttp.Client;
 import aho.unamur.fakeHttp.Response;
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import org.junit.Assert;
 import org.junit.Test;
@@ -75,6 +76,33 @@ public class TestLoginServer {
         LoginServer loginServer = new LoginServer(SECRET);
 
         Response response = client.get(loginServer, "/hello");
+
+        Assert.assertEquals(401, response.getCode());
+    }
+
+    @Test
+    public void testHello_malformedJwt() {
+        Client client = new Client();
+
+        LoginServer loginServer = new LoginServer(SECRET);
+        loginServer.register("bob", "1234");
+
+        Response response = client.get(loginServer, "/hello", "not-a-jwt");
+
+        Assert.assertEquals(401, response.getCode());
+    }
+
+    @Test
+    public void testHello_badSignature() {
+        Client client = new Client();
+
+        LoginServer loginServer = new LoginServer(SECRET);
+
+        String token = JWT.create()
+                .withClaim("username", "bob")
+                .sign(Algorithm.HMAC256("not-the-server-secret"));
+
+        Response response = client.get(loginServer, "/hello", token);
 
         Assert.assertEquals(401, response.getCode());
     }

@@ -2,9 +2,13 @@ package aho.unamur.fakeHttp;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.exceptions.SignatureVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import org.reflections.Reflections;
 
 import com.auth0.jwt.algorithms.Algorithm;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -67,6 +71,12 @@ public abstract class Server extends Agent {
             if (jwt == null) {
                 return new Response(401, "Authorization required and not provided");
             }
+            try {
+                DecodedJWT verify = verifier.verify(jwt);
+            } catch (JWTDecodeException | SignatureVerificationException e) {
+                return new Response(401, "Authorization failed");
+            }
+
         }
 
         if (verb.equals("GET") && body != null) {
@@ -88,7 +98,7 @@ public abstract class Server extends Agent {
                     actualParameters.add(value);
                 }
 
-                 return (Response) method.invoke(this, actualParameters.toArray());
+                return (Response) method.invoke(this, actualParameters.toArray());
             }
             return (Response) method.invoke(this, body);
         } catch (IllegalAccessException | InvocationTargetException e) {
