@@ -1,4 +1,4 @@
-package aho.unamur.javaJwtDemo.fakeHttp;
+package aho.unamur.fakeHttp;
 
 import java.util.HashMap;
 import java.util.Map;

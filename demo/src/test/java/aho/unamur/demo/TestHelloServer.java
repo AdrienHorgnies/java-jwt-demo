@@ -1,17 +1,18 @@
-package aho.unamur.javaJwtDemo;
+package aho.unamur.demo;
 
-import aho.unamur.javaJwtDemo.fakeHttp.Response;
+import aho.unamur.fakeHttp.Client;
+import aho.unamur.fakeHttp.Response;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class TestHelloWorldServer {
+public class TestHelloServer {
     @Test
     public void testHello() {
         Client client = new Client();
 
-        HelloWorldServer hello = new HelloWorldServer();
+        HelloServer helloServer = new HelloServer();
 
-        Response response = client.get(hello, "/hello");
+        Response response = client.get(helloServer, "/hello");
 
         Assert.assertEquals(200, response.getCode());
         Assert.assertEquals("Hello, World !", response.getBody());

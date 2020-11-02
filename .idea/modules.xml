@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/demo/demo.iml" filepath="$PROJECT_DIR$/demo/demo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/fake-http/fake-http.iml" filepath="$PROJECT_DIR$/fake-http/fake-http.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/java-jwt-demo.iml" filepath="$PROJECT_DIR$/.idea/java-jwt-demo.iml" />
     </modules>
   </component>
