@@ -7,6 +7,6 @@ public class HelloServer extends Server {
 
     @Get("/hello")
     public String hello() {
-        return "Hello, world";
+        return "Hello, World !";
     }
 }
