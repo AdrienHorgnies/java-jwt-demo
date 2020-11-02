@@ -3,10 +3,8 @@ package aho.unamur.demo;
 import aho.unamur.fakeHttp.*;
 import com.auth0.jwt.JWT;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.Instant;
+import java.util.*;
 
 public class LoginServer extends Server {
     // never store clear-text password ! I can do it here because everything is fake !
@@ -70,8 +68,15 @@ public class LoginServer extends Server {
     }
 
     private String createJwt(String username, List<String> licenses) {
+        Date now = Date.from(Instant.now());
         return JWT.create()
                 .withIssuer("aho.unamur")
+                .withSubject(username)
+                .withAudience("students", "teachers")
+                .withExpiresAt(Date.from(Instant.parse("2020-11-07T13:00:00.000Z")))
+                .withNotBefore(now)
+                .withIssuedAt(now)
+                .withJWTId(username + "-" + now.toInstant().getEpochSecond())
                 .withClaim("username", username)
                 .withClaim("licenses", licenses)
                 .sign(this.algorithm);
